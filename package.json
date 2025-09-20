@@ -14,12 +14,12 @@
   "type": "commonjs",
   "dependencies": {
     "@hono/node-server": "^1.19.3",
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^12.2.0",
     "cors": "^2.8.5",
-    "hono": "^4.9.8",
-    "pg": "^8.16.3"
+    "hono": "^4.9.8"
   },
   "devDependencies": {
-    "@types/pg": "^8.15.5",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   }

@@ -21,8 +21,9 @@ app.get('/', (c) => {
 // 全競技スケジュール取得
 app.get('/events', async (c) => {
     try {
-        const result = await database_1.default.query('SELECT id, name, schedule_time, location FROM Events ORDER BY schedule_time');
-        return c.json(result.rows);
+        const stmt = database_1.default.prepare('SELECT id, name, schedule_time, location FROM Events ORDER BY schedule_time');
+        const events = stmt.all();
+        return c.json(events);
     }
     catch (error) {
         console.error('Error fetching events:', error);
@@ -37,15 +38,17 @@ app.get('/tournaments/:eventId', async (c) => {
             return c.json({ error: 'Invalid event ID' }, 400);
         }
         // 競技情報取得
-        const eventResult = await database_1.default.query('SELECT id, name FROM Events WHERE id = $1', [eventId]);
-        if (eventResult.rows.length === 0) {
+        const eventStmt = database_1.default.prepare('SELECT id, name FROM Events WHERE id = ?');
+        const event = eventStmt.get(eventId);
+        if (!event) {
             return c.json({ error: 'Event not found' }, 404);
         }
         // トーナメント情報取得
-        const tournamentResult = await database_1.default.query('SELECT id, round, team_a, team_b, winner FROM Tournaments WHERE event_id = $1 ORDER BY id', [eventId]);
+        const tournamentStmt = database_1.default.prepare('SELECT id, round, team_a, team_b, winner FROM Tournaments WHERE event_id = ? ORDER BY id');
+        const tournaments = tournamentStmt.all(eventId);
         return c.json({
-            event: eventResult.rows[0],
-            tournaments: tournamentResult.rows
+            event,
+            tournaments
         });
     }
     catch (error) {

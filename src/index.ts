@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serve } from '@hono/node-server';
-import pool from './database';
+import db from './database';
 
 const app = new Hono();
 
@@ -20,10 +20,9 @@ app.get('/', (c) => {
 // 全競技スケジュール取得
 app.get('/events', async (c) => {
   try {
-    const result = await pool.query(
-      'SELECT id, name, schedule_time, location FROM Events ORDER BY schedule_time'
-    );
-    return c.json(result.rows);
+    const stmt = db.prepare('SELECT id, name, schedule_time, location FROM Events ORDER BY schedule_time');
+    const events = stmt.all();
+    return c.json(events);
   } catch (error) {
     console.error('Error fetching events:', error);
     return c.json({ error: 'Failed to fetch events' }, 500);
@@ -34,30 +33,26 @@ app.get('/events', async (c) => {
 app.get('/tournaments/:eventId', async (c) => {
   try {
     const eventId = parseInt(c.req.param('eventId'));
-    
+
     if (isNaN(eventId)) {
       return c.json({ error: 'Invalid event ID' }, 400);
     }
 
     // 競技情報取得
-    const eventResult = await pool.query(
-      'SELECT id, name FROM Events WHERE id = $1',
-      [eventId]
-    );
+    const eventStmt = db.prepare('SELECT id, name FROM Events WHERE id = ?');
+    const event = eventStmt.get(eventId);
 
-    if (eventResult.rows.length === 0) {
+    if (!event) {
       return c.json({ error: 'Event not found' }, 404);
     }
 
     // トーナメント情報取得
-    const tournamentResult = await pool.query(
-      'SELECT id, round, team_a, team_b, winner FROM Tournaments WHERE event_id = $1 ORDER BY id',
-      [eventId]
-    );
+    const tournamentStmt = db.prepare('SELECT id, round, team_a, team_b, winner FROM Tournaments WHERE event_id = ? ORDER BY id');
+    const tournaments = tournamentStmt.all(eventId);
 
     return c.json({
-      event: eventResult.rows[0],
-      tournaments: tournamentResult.rows
+      event,
+      tournaments
     });
   } catch (error) {
     console.error('Error fetching tournament:', error);
